@@ -1,0 +1,30 @@
+#!/usr/bin/groovy
+
+// Copyright (C) Luxoft Sweden AB 2018
+
+void buildTemplate(String variant, String imageName) {
+    String templateDir = "meta-template"
+    node("Yocto") {
+        dir(templateDir) {
+            checkout scm
+        }
+
+        // Initialize pelux-manifests to get the code
+        sh "rm -rf pelux-manifests/"
+        sh "git clone https://github.com/Pelagicore/pelux-manifests.git"
+
+        dir('pelux-manifests') {
+            def code = load "ci-scripts/yocto.groovy"
+            String templatePath = "${env.WORKSPACE}/${templateDir}"
+            code.buildWithLayer(variant, imageName, templateDir, templatePath)
+        }
+    }
+}
+
+parallel (
+    'intel':        { buildTemplate("intel",        "core-image-pelux-minimal") },
+    'intel-qtauto': { buildTemplate("intel-qtauto", "core-image-pelux-qtauto-neptune") },
+    'rpi':          { buildTemplate("rpi",          "core-image-pelux-minimal") },
+    'rpi-qtauto':   { buildTemplate("rpi-qtauto",   "core-image-pelux-qtauto-neptune") }
+)
+
