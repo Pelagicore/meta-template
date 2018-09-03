@@ -21,10 +21,14 @@ void buildTemplate(String variant, String imageName) {
     }
 }
 
-parallel (
-    'intel':        { buildTemplate("intel",        "core-image-pelux-minimal") },
-    'intel-qtauto': { buildTemplate("intel-qtauto", "core-image-pelux-qtauto-neptune") },
-    'rpi':          { buildTemplate("rpi",          "core-image-pelux-minimal") },
-    'rpi-qtauto':   { buildTemplate("rpi-qtauto",   "core-image-pelux-qtauto-neptune") }
-)
+def variantMap = [:]
+def variantList = env.VARIANT_LIST.split()
 
+variantList.each {
+    def list = it.split(":")
+    variantMap["${list[0]}"] = {
+        buildTemplate(list[0], list[1])
+    }
+}
+
+parallel (variantMap)
