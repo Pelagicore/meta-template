@@ -4,6 +4,16 @@
 
 void buildTemplate(String variant, String imageName) {
     String templateDir = "meta-template"
+    String branchName = "master"
+
+    // If this is a PR, CHANGE_TARGET will be set by the Pipeline Plugin,
+    // otherwise check BRANCH_NAME which is set by Jenkins
+    if (env.CHANGE_TARGET) {
+        branchName = "${env.CHANGE_TARGET}"
+    } else if (env.BRANCH_NAME) {
+        branchName = "${env.BRANCH_NAME}"
+    }
+
     node("Yocto") {
         dir(templateDir) {
             checkout scm
@@ -12,6 +22,7 @@ void buildTemplate(String variant, String imageName) {
         // Initialize pelux-manifests to get the code
         sh "rm -rf pelux-manifests/"
         sh "git clone https://github.com/Pelagicore/pelux-manifests.git"
+        println("Using the specified branch for build: ${branchName}")
 
         dir('pelux-manifests') {
             def code = load "ci-scripts/yocto.groovy"
@@ -22,7 +33,21 @@ void buildTemplate(String variant, String imageName) {
 }
 
 def variantMap = [:]
-def variantList = env.VARIANT_LIST.split()
+def variantList = []
+
+// If VARIANT_LIST is defined in the Jenkins Environment
+// then use that, otherwise use the default
+// Note: This function will throw a NullPointerException if the
+//       variable is not set.
+try {
+    variantList = env.VARIANT_LIST.split()
+    println("Using the specified variant list for build [\"${variantList.join('", "')}\"]")
+} catch(e) {
+    println("Using the default variant list for build. \nCaught error: " + e)
+    variantList = ['intel-qtauto:core-image-pelux-qtauto-neptune-dev',
+                    'rpi-qtauto:core-image-pelux-qtauto-neptune-dev']
+    println("[\"${variantList.join('", "')}\"]")
+}
 
 variantList.each {
     def list = it.split(":")
