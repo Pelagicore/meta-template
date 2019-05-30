@@ -21,13 +21,16 @@ void buildTemplate(String variant, String imageName) {
 
         // Initialize pelux-manifests to get the code
         sh "rm -rf pelux-manifests/"
-        sh "git clone https://github.com/Pelagicore/pelux-manifests.git"
+        sh "git clone https://github.com/Pelagicore/pelux-manifests.git -b ${branchName}"
         println("Using the specified branch for build: ${branchName}")
-
+        sh "cp -R ${templateDir} pelux-manifests/${templateDir}"
         dir('pelux-manifests') {
-            def code = load "ci-scripts/yocto.groovy"
-            String templatePath = "${env.WORKSPACE}/${templateDir}"
-            code.buildWithLayer(variant, imageName, templateDir, templatePath)
+            def customImage = docker.image("pelux/pelux-yocto:yoctouser")
+            customImage.inside("-v $WORKSPACE/pelux-manifests:/workspace -v /var/yocto-cache:/var/yocto-cache --cap-add=NET_ADMIN --device=/dev/net/tun") {
+                def code = load "ci-scripts/yocto2.groovy"
+                String metaPath = "/workspace/${templateDir}"
+                code.buildWithLayer(variant, imageName, templateDir, metaPath)
+            }
         }
     }
 }
